@@ -1,5 +1,5 @@
 # -*- coding: ascii -*-
-from dataclasses import dataclass
+from enum import Enum
 from PIL import Image
 import json
 import os
@@ -11,8 +11,7 @@ __all__ = [
     'create_file', 'create_icon_from_string', 'import_from_file', 'make_directory', 'remove_directory'
 ]
 
-@dataclass
-class Datapack_Namespaces:
+class Datapack_Namespaces(Enum):
     ADVANCEMENTS = 'advancements'
     DIMENSION = 'dimension'
     DIMENSION_TYPE = 'dimension_type'
@@ -24,8 +23,7 @@ class Datapack_Namespaces:
     TAGS = 'tags'
     WORLDGEN = 'worldgen'
 
-@dataclass
-class Font:
+class Font(Enum):
     BOLD = '\033[1m'
     END = '\033[0m'
     ERROR = '\033[91m'
@@ -36,8 +34,7 @@ class Font:
     VARIABLE_INFO = '\033[96m'
     WARN = '\033[93m'
 
-@dataclass
-class Minecraft_Pack_Version:
+class Minecraft_Pack_Version(Enum):
     v1_6_1 = v1_6_2 = v1_6_4 = v1_7_2 = v1_7_4 = v1_7_5 = v1_7_6 = v1_7_8 = v1_7_9 = v1_7_10 = v1_8 = v1_8_1 = v1_8_2 = v1_8_3 = v1_8_4 = v1_8_5 = v1_8_7 = v1_8_8 = v1_8_9 = 1
     v1_9 = v1_9_1 = v1_9_2 = v1_9_3 = v1_9_4 = v1_10 = v1_10_1 = v1_10_2 = 2
     v1_11 = v1_11_1 = v1_11_2 = v1_12 = v1_12_1 = v1_12_2 = 3
