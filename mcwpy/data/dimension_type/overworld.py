@@ -3,7 +3,7 @@ from ... import utility
 
 def overworld(minecraft_pack_format: str=None) -> dict:
     match minecraft_pack_format:
-        case utility.Minecraft_Pack_Version.v1_18_2:
+        case utility.get_minecraft_pack_version('1.18.2'):
             return {
                 "ultrawarm": False, "natural": True, "piglin_safe": False,
                 "respawn_anchor_works": False, "bed_works": True,

@@ -3,12 +3,15 @@ from dataclasses import dataclass
 from PIL import Image
 import json
 import os
+import requests
 import shutil
+import zipfile
 
 
 __all__ = [
-    'Datapack_Namespaces', 'Font', 'Minecraft_Pack_Version',
-    'create_file', 'create_icon_from_string', 'import_from_file', 'make_directory', 'remove_directory'
+    'Datapack_Namespaces', 'Font',
+    'create_file', 'create_icon_from_string', 'get_latest_minecraft_version', 'get_minecraft_pack_version', 
+    'get_mojang_versions_manifest', 'import_from_file', 'make_directory', 'remove_directory'
 ]
 
 @dataclass
@@ -35,19 +38,6 @@ class Font:
     UNDERLINE = '\033[4m'
     VARIABLE_INFO = '\033[96m'
     WARN = '\033[93m'
-
-@dataclass
-class Minecraft_Pack_Version:
-    v1_6_1 = v1_6_2 = v1_6_4 = v1_7_2 = v1_7_4 = v1_7_5 = v1_7_6 = v1_7_8 = v1_7_9 = v1_7_10 = v1_8 = v1_8_1 = v1_8_2 = v1_8_3 = v1_8_4 = v1_8_5 = v1_8_7 = v1_8_8 = v1_8_9 = 1
-    v1_9 = v1_9_1 = v1_9_2 = v1_9_3 = v1_9_4 = v1_10 = v1_10_1 = v1_10_2 = 2
-    v1_11 = v1_11_1 = v1_11_2 = v1_12 = v1_12_1 = v1_12_2 = 3
-    v1_13 = v1_13_1 = v1_13_2 = v1_14 = v1_14_1 = v1_14_2 = v1_14_3 = v1_14_4 = 4
-    v1_15 = v1_15_1 = v1_15_2 = v1_16 = v1_16_1 = 5
-    v1_16_2 = v1_16_3 = v1_16_4 = v1_16_5 = 6
-    v1_17 = v1_17_1 = 7
-    v1_18 = v_18_1 = 8
-    v1_18_2 = 9
-    LATEST = v1_18_2
 
 
 def create_file(name, path: str='', content: object='') -> None:
@@ -88,6 +78,61 @@ def create_icon_from_string(string: str, path: str) -> None:
     img = Image.new(mode='RGB', size=(64, 64), color=(0, 0, 0))
     img.putdata([(colors_list[(i // cl_div) % cl_len], colors_list[((i // cl_div) + 1) % cl_len], colors_list[((i // cl_div) + 2) % cl_len]) for i in range (64 * 64)])
     img.save(path)
+
+def get_latest_minecraft_version(is_snapshot: bool=False) -> str:
+    """Return the latest Minecraft version using Mojang's API."""
+    return get_mojang_versions_manifest()['latest']['snapshot' if is_snapshot else 'release']
+
+def get_minecraft_pack_version(minecraft_version: int|str='latest') -> str:
+    """
+    Get a Minecraft datapack pack version (for the pack.mcmeta) using mojang's API.
+    :param minecraft_version: The Minecraft version the user wants to retrieve the datapack pack version information for.
+    """
+    if isinstance(minecraft_version, int):
+        return minecraft_version
+
+    manifest = get_mojang_versions_manifest()
+
+    if minecraft_version in ['latest', 'latest_release', None]:
+        minecraft_version = manifest['latest']['release']
+    elif minecraft_version == 'latest_snapshot':
+        minecraft_version = manifest['latest']['snapshot']
+
+    if any(e['id'] == minecraft_version for e in manifest['versions']):
+        for version in manifest['versions']:
+            if not version['id'] == minecraft_version:
+                continue
+
+            temporary_folder_path = os.path.join(os.getcwd(), 'temporary_folder')
+            client_jar_url = dict(requests.get(version['url']).json())['downloads']['client']['url']
+            path_to_jar = os.path.join(temporary_folder_path, 'client.jar')
+            path_to_version_json = os.path.join(temporary_folder_path, 'version.json')
+
+            if not os.path.exists(temporary_folder_path):
+                make_directory(temporary_folder_path)
+
+            with requests.get(client_jar_url, stream=True) as r:
+                r.raise_for_status()
+                with open(path_to_jar, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+
+            with zipfile.ZipFile(path_to_jar, 'r') as zf:
+                zf.extract('version.json', temporary_folder_path)
+
+            data = import_from_file(path_to_version_json)
+            remove_directory(temporary_folder_path)
+
+            if isinstance(data['pack_version'], dict):
+                return data['pack_version']['data']
+
+            return data['pack_version']
+
+    raise ValueError(f'Unable to find Minecraft version "{minecraft_version}".')
+
+def get_mojang_versions_manifest() -> dict:
+    """Retrieve Mojang's Minecraft versions manifest online."""
+    return dict(requests.get('https://piston-meta.mojang.com/mc/game/version_manifest.json', timeout=3).json())
 
 def import_from_file(path: str) -> dict | list:
     """

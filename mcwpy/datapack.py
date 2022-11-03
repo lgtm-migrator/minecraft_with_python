@@ -3,7 +3,7 @@ from datetime import date
 from typing import Any, Dict, List, Union
 from .pack_meta import Pack_Meta
 from .workspace import Workspace
-from .utility import Minecraft_Pack_Version as MPV
+from .utility import get_minecraft_pack_version
 from .utility import Font, create_file, remove_directory, create_icon_from_string
 import os
 import shutil
@@ -23,6 +23,8 @@ class Datapack:
         pack folders/zip-files there. This is similar to the Resource Pack selection screen, and allows the player to enable data packs before \
         the world is generated, and easily customize the load order too.
     """
+    _index = 0
+
     def __init__(self, 
                  title: str=None,
                  path: str=None,
@@ -53,7 +55,7 @@ class Datapack:
 
         self.pack_mcmeta = pack_mcmeta if pack_mcmeta is not None else Pack_Meta(
             author=f"{os.getlogin().capitalize()} using MCWPy",
-            minecraft_pack_version=MPV.LATEST,
+            minecraft_pack_version=get_minecraft_pack_version(),
             version=f'{str(date.today().isocalendar()[0])[-2:]}w{date.today().isocalendar()[1]:0>2}s{hex(int(time.time()))[2:]}'
         )
 
@@ -86,9 +88,22 @@ class Datapack:
         """
         return self.workspaces[index]
 
+    def __iter__(self):
+        """Make the Datapack class able to be iterated upon throught its workspaces."""
+        return self
+
     def __len__(self) -> int:
         """Return the number of Workspaces in the Datapack."""
         return len(self.workspaces)
+
+    def __next__(self) -> Workspace:
+        """Iterate through the datapack Workspaces."""
+        if self._index < len(self.workspaces):
+            result = self.workspaces[self._index]
+            self._index += 1
+            return result
+
+        raise StopIteration('')
 
     def __repr__(self) -> str:
         """Return a string representation of the Datapack."""
